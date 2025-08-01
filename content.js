@@ -282,6 +282,9 @@
           // Convert relative time expressions to absolute dates
           if (!prDate) {
             const relativePatterns = [
+              /(\d+)\s+seconds?\s+ago/i,
+              /(\d+)\s+minutes?\s+ago/i,
+              /(\d+)\s+hours?\s+ago/i,
               /(\d+)\s+days?\s+ago/i,
               /(\d+)\s+weeks?\s+ago/i,
               /(\d+)\s+months?\s+ago/i
@@ -294,7 +297,13 @@
                 const value = parseInt(match[1]);
 
                 // Calculate absolute date based on relative time unit
-                if (pattern.source.includes('day')) {
+                if (pattern.source.includes('second')) {
+                  prDate = new Date(now.getTime() - (value * 1000));
+                } else if (pattern.source.includes('minute')) {
+                  prDate = new Date(now.getTime() - (value * 60 * 1000));
+                } else if (pattern.source.includes('hour')) {
+                  prDate = new Date(now.getTime() - (value * 60 * 60 * 1000));
+                } else if (pattern.source.includes('day')) {
                   prDate = new Date(now.getTime() - (value * 24 * 60 * 60 * 1000));
                 } else if (pattern.source.includes('week')) {
                   prDate = new Date(now.getTime() - (value * 7 * 24 * 60 * 60 * 1000));

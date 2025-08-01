@@ -77,7 +77,7 @@ document.addEventListener('DOMContentLoaded', function() {
       // Don't expose detailed error information to user
       let userMessage = 'An error occurred during extraction.';
       if (error.message.includes('Extension not configured')) {
-        userMessage = '⚙️ Extension not configured! Please set your Bitbucket organization and project name in the extension settings. Right-click the extension icon and select "Options" to configure.';
+        userMessage = 'Extension not configured! Please set your Bitbucket organization and project name in the extension settings. Right-click the extension icon and select "Options" to configure.';
       } else if (error.message.includes('UUID')) {
         userMessage = 'Unable to identify user. Please ensure you are logged in to Bitbucket.';
       } else if (error.message.includes('network') || error.message.includes('fetch')) {
