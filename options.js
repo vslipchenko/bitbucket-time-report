@@ -1,5 +1,5 @@
 /**
- * Bitbucket Task Report Extension - Options/Settings Page
+ * Bitbucket Time Report Extension - Options/Settings Page
  * Handles configuration of organization and project settings
  */
 
