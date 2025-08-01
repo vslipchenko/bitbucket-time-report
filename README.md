@@ -41,18 +41,24 @@ The URL format will be: `https://bitbucket.org/<organization>/<project>/pull-req
 - Organization: `acme-corp`
 - Project: `web-app`
 
+![Extension Settings Page](./screenshots/ExtensionSettingsPage.png "Extension Settings Page")
+
 ## Usage
 
 1. **Configure the extension** (see Configuration section above)
 2. Make sure you're logged into Bitbucket
 3. Click the extension icon in your Chrome toolbar
-4. Click "Extract Pull Requests" (The extension will operate in the current tab, run the extension in a new tab if you don't want to lose the progress)
+4. Click "Extract Pull Requests" (The extension will operate in the current tab, run the extension in a new tab if you don't want to lose the progress):
+![Extension Main Screen](./screenshots/ExtensionPopupMainScreen.png "Extension Main Screen")
 5. The extension will:
-   - Get your user UUID
+   - Get your user UUID:
+   ![Your UUID retrieval process](./screenshots/UUIDretrieval.png "Your UUID retrieval process")
    - Load your configured organization and project settings
-   - Navigate to the configured repository
+   - Navigate to the configured repository:
+   ![Navigation Pull Requests page](./screenshots/NavigatingPullRequests.png "Navigation Pull Requests page")
    - Extract all merged PRs from the current month
-   - Format and display the results
+   - Format and display the results:
+   ![Displaying results](./screenshots/TimeReportResults.png "Displaying results")
 6. Click "Copy to Clipboard" to copy the formatted list
 
 ## Output Format
