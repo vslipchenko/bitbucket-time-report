@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bitbucket Task Report - Settings</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+            max-width: 600px;
+            margin: 40px auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+            color: #333;
+        }
+
+        .container {
+            background: white;
+            border-radius: 8px;
+            padding: 30px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            color: #0052cc;
+            margin-bottom: 20px;
+            font-size: 24px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: #333;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+            box-sizing: border-box;
+        }
+
+        input[type="text"]:focus {
+            outline: none;
+            border-color: #0052cc;
+        }
+
+        .example {
+            font-size: 12px;
+            color: #666;
+            margin-top: 5px;
+            font-style: italic;
+        }
+
+        .url-preview {
+            background: #f8f9fa;
+            border: 1px solid #e1e4e8;
+            border-radius: 4px;
+            padding: 15px;
+            margin: 20px 0;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            word-break: break-all;
+        }
+
+        .url-preview-label {
+            font-weight: 500;
+            margin-bottom: 8px;
+            color: #333;
+        }
+
+        button {
+            background: #0052cc;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            margin-right: 10px;
+        }
+
+        button:hover {
+            background: #0043a8;
+        }
+
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .status {
+            padding: 10px;
+            border-radius: 4px;
+            margin-top: 15px;
+            display: none;
+        }
+
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .info-box {
+            background: #e3f2fd;
+            border: 1px solid #bbdefb;
+            border-radius: 4px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+
+        .info-box h3 {
+            margin: 0 0 10px 0;
+            color: #1976d2;
+        }
+
+        .info-box p {
+            margin: 0;
+            line-height: 1.5;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Bitbucket Task Report Settings</h1>
+        
+        <div class="info-box">
+            <h3>Configuration Required</h3>
+            <p>Please configure your Bitbucket organization and project below. You can find these values in your Bitbucket URL when viewing pull requests.</p>
+        </div>
+
+        <form id="settingsForm">
+            <div class="form-group">
+                <label for="organization">Organization Name:</label>
+                <input type="text" id="organization" name="organization" placeholder="e.g., mycompany" required>
+                <div class="example">The organization name from your Bitbucket URL</div>
+            </div>
+
+            <div class="form-group">
+                <label for="project">Project/Repository Name:</label>
+                <input type="text" id="project" name="project" placeholder="e.g., my-project" required>
+                <div class="example">The repository name from your Bitbucket URL</div>
+            </div>
+
+            <div class="url-preview">
+                <div class="url-preview-label">URL Preview:</div>
+                <div id="urlPreview">https://bitbucket.org/<strong>organization</strong>/<strong>project</strong>/pull-requests/?state=MERGED&author={<user_uuid>}</div>
+                <p><i>Note: user_uuid is retrieved automatically by the extension.</i></p>
+            </div>
+
+            <button type="submit" id="saveButton">Save Settings</button>
+            <button type="button" id="resetButton">Reset to Defaults</button>
+        </form>
+
+        <div id="status" class="status"></div>
+    </div>
+
+    <script src="options.js"></script>
+</body>
+</html>

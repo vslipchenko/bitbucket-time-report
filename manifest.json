@@ -1,0 +1,38 @@
+{
+  "manifest_version": 3,
+  "name": "Bitbucket Time Report",
+  "version": "1.0",
+  "description": "Extracts merged pull requests from Bitbucket for the current month and formats them for easy reporting.",
+  "icons": {
+    "16": "icon16.png",
+    "48": "icon48.png",
+    "128": "icon128.png"
+  },
+  "permissions": [
+    "activeTab",
+    "scripting",
+    "storage"
+  ],
+  "host_permissions": [
+    "*://bitbucket.org/*"
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Bitbucket Time Report",
+    "default_icon": {
+      "16": "icon16.png",
+      "48": "icon48.png",
+      "128": "icon128.png"
+    }
+  },
+  "content_scripts": [
+    {
+      "matches": ["*://bitbucket.org/*"],
+      "js": ["content.js"]
+    }
+  ],
+  "options_page": "options.html",
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'none';"
+  }
+}
