@@ -375,7 +375,7 @@
                 // Check if the remaining part doesn't contain any other ticket IDs
                 const remainingPart = match[1].trim();
                 if (!/[A-Z]+-\d+/i.test(remainingPart)) {
-                  // Safe to clean - it's just "DEP-6025: Add Links to NMD Forecast Metrics"
+                  // Safe to clean - it's just "ABC-6025: Add Links to Assets"
                   // But let's actually keep it for consistency
                   cleanTitle = title; // Keep original title with ticket ID
                   console.log('Keeping ticket ID in title for context:', title);
