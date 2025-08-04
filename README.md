@@ -1,6 +1,6 @@
 # Bitbucket Time Report Chrome Extension
 
-A Chrome extension that extracts merged pull requests from Bitbucket for the current month and formats them for easy reporting.
+A Chrome extension that processes merged pull requests from Bitbucket for the current month and formats them for easy reporting.
 
 > The extension works only with merged PRs. It counts the day the PR was merged as the task completion date.<br/><br/>
 > **It does not process your open/pending PRs nor current task(-s) in progress, so you have to process them manually in case those have to be reported.** <br/>
@@ -12,7 +12,7 @@ A Chrome extension that extracts merged pull requests from Bitbucket for the cur
 - **Configurable organization and project settings** - Works with any Bitbucket repository
 - Automatically detects your Bitbucket user UUID
 - Navigates to your merged pull requests for the current month
-- Extracts data from all pages (handles pagination)
+- Processes data from all pages (handles pagination)
 - Skips weekend days (Saturday and Sunday), as these are typically non-working days
 - Formats output as: `(D) <F/B>, <P/D>: <PR Title>`
   - D = Date in the format: `<Month> <Day Of Month>, <Day Of Week>`, e.g. January 1, Monday

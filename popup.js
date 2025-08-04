@@ -101,7 +101,7 @@ document.addEventListener('DOMContentLoaded', function() {
   });
 
   /**
-   * Extracts PRs from all pages in the Bitbucket PR list
+   * Processes PRs from all pages in the Bitbucket PR list
    * Handles pagination automatically by detecting and navigating through pages
    * @param {number} tabId - Chrome tab ID where extraction occurs
    */

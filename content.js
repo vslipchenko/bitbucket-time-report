@@ -115,7 +115,7 @@
     },
 
     /**
-     * Extracts pull request data from the current Bitbucket page
+     * Processes pull request data from the current Bitbucket page
      * Processes only PRs from the current month and generates timeline entries
      * Handles various Bitbucket UI layouts through multiple selector strategies
      * @returns {Array} - Array of formatted timeline entries with progress and done states
