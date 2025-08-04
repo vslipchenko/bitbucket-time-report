@@ -48,7 +48,7 @@ The URL format will be: `https://bitbucket.org/<organization>/<project>/pull-req
 1. **Configure the extension** (see Configuration section above)
 2. Make sure you're logged into Bitbucket
 3. Click the extension icon in your Chrome toolbar
-4. Click "Extract Pull Requests" (The extension will operate in the current tab, run the extension in a new tab if you don't want to lose the progress):
+4. Click "Generate Report" (The extension will operate in the current tab, run the extension in a new tab if you don't want to lose the progress):
 ![Extension Main Screen](./screenshots/ExtensionPopupMainScreen.png "Extension Main Screen")
 5. The extension will:
    - Get your user UUID:
@@ -56,7 +56,7 @@ The URL format will be: `https://bitbucket.org/<organization>/<project>/pull-req
    - Load your configured organization and project settings
    - Navigate to the configured repository:
    ![Navigation Pull Requests page](./screenshots/NavigatingPullRequests.png "Navigation Pull Requests page")
-   - Extract all merged PRs from the current month
+   - Process all merged PRs from the current month
    - Format and display the results:
    ![Displaying results](./screenshots/TimeReportResults.png "Displaying results")
 6. Click "Copy to Clipboard" to copy the formatted list
@@ -94,4 +94,4 @@ The extension requires:
   - If the extension fails to find your UUID, try refreshing the Bitbucket page first
   - The extension works best on the main Bitbucket domain (bitbucket.org)
   - Avoid clicking or typing while extension generating reports to prevent cases when the extension popup disappears along with results
-  - If Pull Requests page gets opened but nothing happens (extensions popup may disappear as well), try to re-run the report generation by opening the extension popup and clicking "Extract Pull Requests"
+  - If Pull Requests page gets opened but nothing happens (extensions popup may disappear as well), try to re-run the report generation by opening the extension popup and clicking "Generate Report"
