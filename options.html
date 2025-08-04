@@ -133,6 +133,28 @@
             margin: 0;
             line-height: 1.5;
         }
+
+        .repository-link {
+            color: #0052cc; 
+            text-decoration: none;
+        }
+
+        .repository-link:hover {
+            text-decoration: underline;
+        }
+
+        .footer-section {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+            text-align: center;
+            color: #666;
+            font-size: 12px;
+        }
+
+        .footer-text {
+            margin-top: 5px;
+        }
     </style>
 </head>
 <body>
@@ -168,6 +190,15 @@
         </form>
 
         <div id="status" class="status"></div>
+        
+        <div class="footer-section">
+            <p>
+                <a class="repository-link" href="https://github.com/vslipchenko/bitbucket-time-report" target="_blank" rel="noopener noreferrer nofollow">
+                    📖 View Documentation & Source Code on GitHub
+                </a>
+            </p>
+            <p class="footer-text">Report issues or contribute to the project</p>
+        </div>
     </div>
 
     <script src="options.js"></script>

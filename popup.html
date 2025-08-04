@@ -86,12 +86,31 @@
     .hidden {
       display: none;
     }
+
+    .repository-link {
+      color: #678; 
+      text-decoration: none;
+    }
+
+    .repository-link:hover {
+      text-decoration: underline;
+    }
+
+    .repository-info {
+      font-size: 11px;
+      margin-top: 5px;
+    }
   </style>
 </head>
 <body>
   <div class="header">
     <h3>Bitbucket Time Report</h3>
     <p>Process merged PRs for current month</p>
+    <p class="repository-info">
+      <a class="repository-link" rel="noopener noreferrer nofollow" href="https://github.com/vslipchenko/bitbucket-time-report" target="_blank">
+        📖 Documentation & Source
+      </a>
+    </p>
   </div>
 
   <button id="extractButton" class="button">Generate Report</button>

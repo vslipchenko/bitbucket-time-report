@@ -3,6 +3,7 @@
   "name": "Bitbucket Time Report",
   "version": "1.0",
   "description": "Extracts merged pull requests from Bitbucket for the current month and formats them for easy reporting.",
+  "homepage_url": "https://github.com/vslipchenko/bitbucket-time-report",
   "icons": {
     "16": "icon16.png",
     "48": "icon48.png",
