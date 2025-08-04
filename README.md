@@ -63,7 +63,7 @@ The URL format will be: `https://bitbucket.org/<organization>/<project>/pull-req
 
 ## Output Format
 
-Each pull request is formatted as:
+Each report entry is formatted as:
 ```
 F, P: ABC-1010: Add new feature for user authentication (When In Progress, PR not created yet)
 F, D: ABC-1010: Add new feature for user authentication (When Done, PR with changes is created)
