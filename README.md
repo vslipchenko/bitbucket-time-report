@@ -14,7 +14,8 @@ A Chrome extension that extracts merged pull requests from Bitbucket for the cur
 - Navigates to your merged pull requests for the current month
 - Extracts data from all pages (handles pagination)
 - Skips weekend days (Saturday and Sunday), as these are typically non-working days
-- Formats output as: `<F/B>, <P/D>: <PR Title>`
+- Formats output as: `(D) <F/B>, <P/D>: <PR Title>`
+  - D = Date in the format: `<Month> <Day Of Month>, <Day Of Week>`, e.g. January 1, Monday
   - F = Feature, B = Bug (auto-detected based on branch name/title)
   - P = In Progress, D = Done
 - Provides copy-to-clipboard functionality
@@ -65,14 +66,19 @@ The URL format will be: `https://bitbucket.org/<organization>/<project>/pull-req
 
 Each report entry is formatted as:
 ```
-F, P: ABC-1010: Add new feature for user authentication (When In Progress, PR not created yet)
-F, D: ABC-1010: Add new feature for user authentication (When Done, PR with changes is created)
-B, P: ABC-5050: Fix login validation issue
+(August 4, Thursday) F, D: ABC-1010: Add new feature for user authentication 
+
+(August 3, Wednesday) F, P: ABC-1010: Add new feature for user authentication
+
+(August 2, Tuesday) B, D: ABC-5050: Fix login validation issue
+
+(August 1, Monday) B, P: ABC-5050: Fix login validation issue
 ```
 
 Where:
+- `D` = Date (auto-detected)
 - `F` = Feature, `B` = Bug (auto-detected)
-- `P` = In Progress (Usually occupies dates between the completion of the previous task and the current one, but can also be done in the same day along with other task(-s)), `D` = Done (PR is created, task is considered as Done)
+- `P` = In Progress (assumed to occupy dates between the completion of the previous task and the current one, but can also be done in the same day along with other task(-s)), `D` = Done (PR is created, task is considered as Done)
 - Title is the PR title
 
 ## Permissions
