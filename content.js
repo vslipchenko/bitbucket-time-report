@@ -504,15 +504,17 @@
               
               const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
                                'July', 'August', 'September', 'October', 'November', 'December'];
+              const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
               const monthName = monthNames[progressDate.getMonth()];
               const dayNum = progressDate.getDate();
+              const dayName = dayNames[progressDate.getDay()];
 
               timeline.push({
                 date: progressDate,
-                entry: `(${monthName} ${dayNum}) ${currentPR.type}, P: ${currentPR.title}`,
+                entry: `(${monthName} ${dayNum}, ${dayName}) ${currentPR.type}, P: ${currentPR.title}`,
                 dateString: progressDate.toISOString().split('T')[0]
               });
-              console.log(`Added progress entry for ${progressDate.toISOString().split('T')[0]}: (${monthName} ${dayNum}) ${currentPR.type}, P: ${currentPR.title}`);
+              console.log(`Added progress entry for ${progressDate.toISOString().split('T')[0]}: (${monthName} ${dayNum}, ${dayName}) ${currentPR.type}, P: ${currentPR.title}`);
             }
           }
         }
@@ -524,15 +526,17 @@
         if (dayOfWeek !== 0 && dayOfWeek !== 6) { // Skip weekends (Saturday = 6, Sunday = 0)
           const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
                              'July', 'August', 'September', 'October', 'November', 'December'];
+          const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
           const monthName = monthNames[currentPR.date.getMonth()];
           const dayNum = currentPR.date.getDate();
+          const dayName = dayNames[currentPR.date.getDay()];
 
           timeline.push({
             date: currentPR.date,
-            entry: `(${monthName} ${dayNum}) ${currentPR.type}, D: ${currentPR.title}`,
+            entry: `(${monthName} ${dayNum}, ${dayName}) ${currentPR.type}, D: ${currentPR.title}`,
             dateString: currentPR.dateString
           });
-          console.log(`Added done entry for ${currentPR.dateString}: (${monthName} ${dayNum}) ${currentPR.type}, D: ${currentPR.title}`);
+          console.log(`Added done entry for ${currentPR.dateString}: (${monthName} ${dayNum}, ${dayName}) ${currentPR.type}, D: ${currentPR.title}`);
         } else {
           console.log(`Skipping weekend done entry for ${currentPR.dateString} (${dayOfWeek === 0 ? 'Sunday' : 'Saturday'})`);
         }
