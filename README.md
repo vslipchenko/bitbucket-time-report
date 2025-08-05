@@ -85,7 +85,6 @@ Where:
 
 The extension requires:
 - `activeTab` - To interact with the current tab
-- `scripting` - To inject scripts for data extraction
 - `storage` - To store temporary data
 - Host permission for `bitbucket.org` - To access Bitbucket pages
 
