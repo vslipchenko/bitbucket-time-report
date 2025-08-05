@@ -590,6 +590,109 @@
         return true;
       }
       return false;
+    },
+
+    /**
+     * Checks if PR list content is fully loaded and ready
+     * Uses progressive detection - starts strict, becomes more flexible
+     * @returns {boolean} - true if content is ready
+     */
+    checkPRListReady: function() {
+      try {
+        console.log('Checking PR list readiness...');
+        
+        // Quick check: Is this obviously a PR page?
+        const url = window.location.href;
+        if (!url.includes('pull-requests')) {
+          console.log('Not on pull-requests page yet');
+          return false;
+        }
+
+        // Quick check: Basic page structure loaded?
+        const hasBasicStructure = document.querySelector('main') || 
+                                 document.querySelector('[data-testid="page-content"]') ||
+                                 document.querySelector('#main') ||
+                                 document.body.children.length > 5;
+        
+        if (!hasBasicStructure) {
+          console.log('Basic page structure not ready');
+          return false;
+        }
+
+        // Look for PR list container (multiple selectors, more flexible)
+        const prContainer = document.querySelector('[data-testid="pullrequest-list"]') ||
+                           document.querySelector('.pullrequest-list') ||
+                           document.querySelector('[data-qa="pr-table-pullrequest-list"]') ||
+                           document.querySelector('table[role="table"]') ||
+                           document.querySelector('table') ||
+                           document.querySelector('[data-testid="repository-pullrequest-list"]') ||
+                           document.querySelector('[class*="pull"][class*="request"]') ||
+                           document.querySelector('[class*="pr-"]');
+        
+        if (!prContainer) {
+          // Maybe it's still loading, check for any content area
+          const contentArea = document.querySelector('main') || document.querySelector('[role="main"]');
+          if (contentArea && contentArea.textContent.length > 100) {
+            console.log('Content area has text, might be ready even without specific container');
+            return true;
+          }
+          console.log('No PR container found');
+          return false;
+        }
+
+        console.log('Found PR container:', prContainer.tagName, prContainer.className);
+
+        // Check for obvious loading states (but don't be too strict)
+        const activeLoaders = document.querySelectorAll('.loading, .spinner, [data-testid="loading"]');
+        const hasActiveLoaders = Array.from(activeLoaders).some(el => {
+          const isVisible = el.offsetParent !== null && !el.hidden && 
+                           getComputedStyle(el).display !== 'none';
+          if (isVisible) {
+            console.log('Found active loader:', el.className);
+          }
+          return isVisible;
+        });
+
+        if (hasActiveLoaders) {
+          console.log('Loading indicators still active');
+          return false;
+        }
+
+        // Look for any content (be more flexible about what counts as content)
+        const prRows = prContainer.querySelectorAll('tr, .pr-item, [data-qa*="pr"], [data-testid*="pr"], [class*="pullrequest"]');
+        const noResultsMessage = document.querySelector('[data-testid="no-pullrequests"], .no-results, .empty-state') ||
+                                 prContainer.textContent.toLowerCase().includes('no pull requests') ||
+                                 prContainer.textContent.toLowerCase().includes('no results');
+        
+        const hasAnyContent = prRows.length > 0 || noResultsMessage || prContainer.textContent.length > 50;
+        
+        if (!hasAnyContent) {
+          console.log('Container found but no content yet. Container text length:', prContainer.textContent.length);
+          return false;
+        }
+
+        console.log(`PR list is ready! Found ${prRows.length} rows, noResults: ${!!noResultsMessage}`);
+        return true;
+
+      } catch (error) {
+        console.error('Error checking PR list readiness:', error);
+        // On error, assume it might be ready to avoid hanging
+        return true;
+      }
+    },
+
+    /**
+     * Checks if new page content is loaded after pagination
+     * @returns {boolean} - true if new page content is ready
+     */
+    checkPageReady: function() {
+      try {
+        // Similar to checkPRListReady but focuses on page change completion
+        return this.checkPRListReady();
+      } catch (error) {
+        console.error('Error checking page readiness:', error);
+        return false;
+      }
     }
   };
 
@@ -612,7 +715,7 @@
     }
 
     // Security: Whitelist allowed actions to prevent unauthorized calls
-    const allowedActions = ['getUserUUID', 'extractPRs', 'hasNextPage', 'goToNextPage'];
+    const allowedActions = ['getUserUUID', 'extractPRs', 'hasNextPage', 'goToNextPage', 'checkPRListReady', 'checkPageReady'];
     if (!allowedActions.includes(request.action)) {
       console.warn('Unknown action requested:', request.action);
       return false;
@@ -640,6 +743,16 @@
           // Navigate to next page of results
           const navigated = window.bitbucketPRExtractor.goToNextPage();
           sendResponse({navigated: navigated});
+          break;
+        case 'checkPRListReady':
+          // Check if PR list content is fully loaded
+          const prListReady = window.bitbucketPRExtractor.checkPRListReady();
+          sendResponse({ready: prListReady});
+          break;
+        case 'checkPageReady':
+          // Check if new page content is loaded after pagination
+          const pageReady = window.bitbucketPRExtractor.checkPageReady();
+          sendResponse({ready: pageReady});
           break;
       }
     } catch (error) {

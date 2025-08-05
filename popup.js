@@ -29,7 +29,7 @@ document.addEventListener('DOMContentLoaded', function() {
       // Ensure we're on Bitbucket domain for the extension to work
       if (!tab.url.includes('bitbucket.org')) {
         await chrome.tabs.update(tab.id, {url: 'https://bitbucket.org/'});
-        await waitForPageLoad(2000);  // Allow time for navigation
+        await waitForContentReady(tab.id, 'basic', 10000);  // Wait for basic page readiness
       }
 
       // Step 1: Identify the current user via content script
@@ -67,7 +67,7 @@ document.addEventListener('DOMContentLoaded', function() {
       // URL format: https://bitbucket.org/<organization>/<project>/pull-requests/?state=MERGED&author={uuid}
       const prUrl = `https://bitbucket.org/${encodeURIComponent(settings.organization)}/${encodeURIComponent(settings.project)}/pull-requests/?state=MERGED&author={${encodeURIComponent(userUUID)}}`;
       await chrome.tabs.update(tab.id, {url: prUrl});
-      await waitForPageLoad(4000);  // Allow time for page load and filtering
+      await waitForContentReady(tab.id, 'prList', 20000);  // Wait for PR list to be ready
 
       // Step 5: Extract PR data from all pages (handles pagination automatically)
       await processAllPullRequests(tab.id);
@@ -128,7 +128,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (nextPageResponse && nextPageResponse.hasNext) {
           // Navigate to next page and continue extraction
           await chrome.tabs.sendMessage(tabId, {action: 'goToNextPage'});
-          await waitForPageLoad(3000); // Allow time for page navigation
+          await waitForContentReady(tabId, 'nextPage', 15000); // Wait for next page content to load
           pageCount++;
         } else {
           hasMorePages = false;  // No more pages, exit loop
@@ -205,12 +205,88 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 
   /**
-   * Utility function to wait for page loading/navigation
-   * @param {number} ms - Milliseconds to wait
-   * @returns {Promise} - Resolves after specified time
+   * Smart wait function that checks for actual content readiness
+   * Optimized for high-speed networks with progressive fallbacks
+   * @param {number} tabId - Chrome tab ID
+   * @param {string} contentType - Type of content to wait for: 'basic', 'prList', 'nextPage'
+   * @param {number} maxWait - Maximum wait time in ms (default: 15 seconds)
+   * @returns {Promise} - Resolves when content is ready or timeout
    */
-  function waitForPageLoad(ms) {
-    return new Promise(resolve => setTimeout(resolve, ms));
+  async function waitForContentReady(tabId, contentType = 'basic', maxWait = 15000) {
+    const startTime = Date.now();
+    let checkCount = 0;
+    
+    return new Promise((resolve) => {
+      const checkContent = async () => {
+        checkCount++;
+        const elapsed = Date.now() - startTime;
+        
+        try {
+          let isReady = false;
+          
+          switch (contentType) {
+            case 'basic':
+              // Just check if content script is responsive
+              await chrome.tabs.sendMessage(tabId, {action: 'getUserUUID'});
+              isReady = true;
+              break;
+              
+            case 'prList':
+              // Check if PR list content is loaded (even if empty)
+              const prCheck = await chrome.tabs.sendMessage(tabId, {action: 'checkPRListReady'});
+              isReady = prCheck && prCheck.ready;
+              break;
+              
+            case 'nextPage':
+              // Check if pagination completed and new content loaded
+              const pageCheck = await chrome.tabs.sendMessage(tabId, {action: 'checkPageReady'});
+              isReady = pageCheck && pageCheck.ready;
+              break;
+          }
+          
+          if (isReady) {
+            console.log(`✓ Content ready (${contentType}) in ${elapsed}ms after ${checkCount} checks`);
+            resolve();
+            return;
+          }
+          
+          // Log progress for debugging
+          if (checkCount === 1) {
+            console.log(`Waiting for ${contentType} content...`);
+          } else if (checkCount % 25 === 0) { // Every 5 seconds (25 * 200ms)
+            console.log(`Still waiting for ${contentType} content... ${elapsed}ms elapsed`);
+          }
+          
+        } catch (error) {
+          // Content not ready yet, continue checking
+          if (checkCount === 1) {
+            console.log(`Content script not responsive yet for ${contentType}...`);
+          }
+        }
+        
+        // Check if we've exceeded max wait time
+        if (elapsed >= maxWait) {
+          console.log(`⚠️ Content check timeout (${contentType}) after ${elapsed}ms, proceeding anyway`);
+          resolve(); // Resolve anyway to prevent hanging
+          return;
+        }
+        
+        // Progressive intervals: start fast, slow down for longer waits
+        let nextInterval;
+        if (elapsed < 2000) {
+          nextInterval = 200; // Check every 200ms for first 2 seconds (high-speed networks)
+        } else if (elapsed < 5000) {
+          nextInterval = 400; // Every 400ms for next 3 seconds
+        } else {
+          nextInterval = 800; // Every 800ms after 5 seconds (slower networks)
+        }
+        
+        setTimeout(checkContent, nextInterval);
+      };
+      
+      // Start checking immediately
+      checkContent();
+    });
   }
 
   /**
