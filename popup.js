@@ -4,7 +4,7 @@
  */
 document.addEventListener('DOMContentLoaded', function() {
   // Get references to UI elements
-  const extractButton = document.getElementById('extractButton');
+  const generateReportButton = document.getElementById('generateReportButton');
   const status = document.getElementById('status');
   const results = document.getElementById('results');
   const copyButton = document.getElementById('copyButton');
@@ -17,10 +17,10 @@ document.addEventListener('DOMContentLoaded', function() {
    * Main extraction process triggered by button click
    * Workflow: UUID detection → Navigation → PR extraction → Formatting
    */
-  extractButton.addEventListener('click', async function() {
+  generateReportButton.addEventListener('click', async function() {
     try {
       showStatus('Getting current user UUID...', 'loading');
-      extractButton.disabled = true;  // Prevent multiple simultaneous extractions
+      generateReportButton.disabled = true;  // Prevent multiple simultaneous extractions
       allPRs = [];  // Reset accumulated data
 
       // Get reference to the active browser tab
@@ -61,7 +61,7 @@ document.addEventListener('DOMContentLoaded', function() {
         throw new Error('Extension not configured. Please set your organization and project in the extension options (right-click extension icon → Options).');
       }
       
-      showStatus('Navigating to pull requests...', 'loading');
+      showStatus('Navigating to pull requests to process them...', 'loading');
 
       // Step 4: Build dynamic URL using configured organization and project
       // URL format: https://bitbucket.org/<organization>/<project>/pull-requests/?state=MERGED&author={uuid}
@@ -70,7 +70,7 @@ document.addEventListener('DOMContentLoaded', function() {
       await waitForPageLoad(4000);  // Allow time for page load and filtering
 
       // Step 5: Extract PR data from all pages (handles pagination automatically)
-      await extractAllPullRequests(tab.id);
+      await processAllPullRequests(tab.id);
 
     } catch (error) {
       console.error('Extraction error:', error);
@@ -84,7 +84,7 @@ document.addEventListener('DOMContentLoaded', function() {
         userMessage = 'Network error. Please check your connection and try again.';
       }
       showStatus(userMessage, 'error');
-      extractButton.disabled = false;
+      generateReportButton.disabled = false;
     }
   });
 
@@ -105,14 +105,14 @@ document.addEventListener('DOMContentLoaded', function() {
    * Handles pagination automatically by detecting and navigating through pages
    * @param {number} tabId - Chrome tab ID where extraction occurs
    */
-  async function extractAllPullRequests(tabId) {
+  async function processAllPullRequests(tabId) {
     let pageCount = 1;
     let hasMorePages = true;
 
     // Loop through all pages of PR results
     while (hasMorePages) {
       try {
-        showStatus(`Extracting pull requests from page ${pageCount}...`, 'loading');
+        showStatus(`Processing pull requests from page ${pageCount}...`, 'loading');
 
         // Extract PR data from the current page using content script
         const response = await chrome.tabs.sendMessage(tabId, {action: 'extractPRs'});
@@ -194,14 +194,14 @@ document.addEventListener('DOMContentLoaded', function() {
       results.textContent = extractedData;
       results.style.display = 'block';
       copyButton.classList.remove('hidden');
-      showStatus(`Extraction complete! Found ${uniquePRs.length} pull requests for current month across ${pageCount} pages`, 'success');
+      showStatus(`Report generation complete! Found ${uniquePRs.length} pull requests for current month across ${pageCount} pages`, 'success');
     } else {
       showStatus('No pull requests found for current month', 'success');
       results.style.display = 'none';
       copyButton.classList.add('hidden');
     }
 
-    extractButton.disabled = false;
+    generateReportButton.disabled = false;
   }
 
   /**
