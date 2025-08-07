@@ -22,6 +22,12 @@ A Chrome extension that processes merged pull requests from Bitbucket for the cu
 
 ## Installation
 
+### Option 1: Chrome Web Store (Recommended)
+
+Install directly from the [Chrome Web Store](https://chromewebstore.google.com/detail/bitbucket-time-report/fmmhfegmdgkblngmeaooiaecippkbfpj).
+
+### Option 2: Manual Installation (Developer Mode)
+
 1. Open Chrome and navigate to `chrome://extensions/`
 2. Enable "Developer mode" in the top right
 3. Click "Load unpacked" and select this folder
