@@ -1,6 +1,9 @@
 // Content script for enhanced PR extraction and pagination handling
 (function() {
   'use strict';
+  
+  // Debug logging
+  console.log('Bitbucket Time Report: Content script starting...');
 
   // Store extracted data globally for the extension
   window.bitbucketPRExtractor = {
@@ -121,11 +124,14 @@
      * @returns {Array} - Array of formatted timeline entries with progress and done states
      */
     extractPRsFromCurrentPage: function() {
-      const currentYear = new Date().getFullYear();
-      const currentMonth = new Date().getMonth() + 1;
-      const rawPRs = []; // Store raw PR data with dates for timeline processing
+      try {
+        const currentYear = new Date().getFullYear();
+        const currentMonth = new Date().getMonth() + 1;
+        const rawPRs = []; // Store raw PR data with dates for timeline processing
 
-      console.log(`Looking for PRs from ${currentYear}-${String(currentMonth).padStart(2, '0')}`);
+        console.log(`Looking for PRs from ${currentYear}-${String(currentMonth).padStart(2, '0')}`);
+        console.log(`Today's date: ${new Date().toISOString().split('T')[0]}`);
+        console.log(`Current time: ${new Date().toLocaleString()}`);
 
       // Multiple CSS selectors to handle different Bitbucket UI versions and layouts
       // Bitbucket frequently changes their DOM structure, so we try multiple approaches
@@ -150,8 +156,9 @@
       let prRows = [];
       for (const selector of prSelectors) {
         prRows = document.querySelectorAll(selector);
+        console.log(`Tried selector "${selector}": found ${prRows.length} rows`);
         if (prRows.length > 0) {
-          console.log(`Found ${prRows.length} rows using selector: ${selector}`);
+          console.log(`Using selector: ${selector}`);
           break; // Use the first selector that finds results
         }
       }
@@ -159,6 +166,93 @@
       console.log(`Total rows found: ${prRows.length}`);
       console.log(`Current URL: ${window.location.href}`);
       console.log(`Looking for PRs from month ${currentMonth} of year ${currentYear}`);
+      
+      // If no rows found, let's debug what's actually in the page
+      if (prRows.length === 0) {
+        console.log('DEBUG: No PR rows found, investigating page structure...');
+        const container = document.querySelector('[data-testid="pullrequest-list"]') ||
+                         document.querySelector('.pullrequest-list') ||
+                         document.querySelector('table') ||
+                         document.querySelector('[data-qa="pr-table-pullrequest-list"]');
+        
+        if (container) {
+          console.log('DEBUG: Container found:', container.tagName, container.className);
+          console.log('DEBUG: Container HTML (first 1000 chars):', container.outerHTML.substring(0, 1000));
+          
+          // Look for any table rows
+          const allRows = container.querySelectorAll('tr');
+          console.log('DEBUG: Found', allRows.length, 'total <tr> elements');
+          
+          // Check if there's a tbody and what's in it
+          const tbody = container.querySelector('tbody');
+          if (tbody) {
+            console.log('DEBUG: Found tbody with content length:', tbody.textContent.length);
+            console.log('DEBUG: Tbody HTML (first 800 chars):', tbody.outerHTML.substring(0, 800));
+            
+            // Look for any direct children of tbody
+            const tbodyChildren = tbody.children;
+            console.log('DEBUG: Tbody has', tbodyChildren.length, 'direct children');
+            for (let i = 0; i < Math.min(3, tbodyChildren.length); i++) {
+              console.log(`DEBUG: Tbody child ${i}:`, tbodyChildren[i].tagName, tbodyChildren[i].className);
+            }
+          } else {
+            console.log('DEBUG: No tbody found');
+          }
+          
+          // Look for any elements with common PR-related classes or data attributes
+          const possiblePRElements = container.querySelectorAll('[class*="pull"], [class*="pr"], [data-testid*="pr"], [data-testid*="pull"]');
+          console.log('DEBUG: Found', possiblePRElements.length, 'elements with PR-related attributes');
+          
+          if (possiblePRElements.length > 0) {
+            console.log('DEBUG: First PR-like element:', possiblePRElements[0].outerHTML.substring(0, 200));
+          }
+          
+          // Check if there are any links that might be PR links
+          const prLinks = container.querySelectorAll('a[href*="/pull-request"]');
+          console.log('DEBUG: Found', prLinks.length, 'PR links');
+          
+          // Check for any links at all
+          const allLinks = container.querySelectorAll('a');
+          console.log('DEBUG: Found', allLinks.length, 'total links in container');
+          
+          if (prLinks.length > 0) {
+            console.log('DEBUG: First PR link:', prLinks[0].outerHTML);
+          }
+          
+          // Check if table might be loading dynamically
+          const tableText = container.textContent.toLowerCase();
+          if (tableText.includes('loading') || tableText.includes('spinner')) {
+            console.log('DEBUG: Table appears to be still loading');
+          }
+          
+          // Look for specific Bitbucket loading indicators
+          const loadingElements = container.querySelectorAll('[data-testid*="loading"], [aria-busy="true"], .spinner, .loading');
+          console.log('DEBUG: Found', loadingElements.length, 'loading indicators');
+          
+          // Check for "no results" or "empty state" messages
+          const noResultsSelectors = [
+            '[data-testid="no-pullrequests"]', '.no-results', '.empty-state',
+            '.no-data', '.empty-content', '[class*="empty"]', '[class*="no-results"]',
+            '[class*="no-pull"]', '[class*="zero"]'
+          ];
+          
+          const noResultsElement = container.querySelector(noResultsSelectors.join(', '));
+          if (noResultsElement) {
+            console.log('DEBUG: Found "no results" message:', noResultsElement.textContent.trim());
+          }
+          
+          // Check the text content for common "no results" phrases
+          const containerText = container.textContent.toLowerCase();
+          const noResultsPhrases = ['no pull requests', 'no results', 'no items', 'nothing found', 'no data', 'empty'];
+          for (const phrase of noResultsPhrases) {
+            if (containerText.includes(phrase)) {
+              console.log('DEBUG: Container text suggests no results:', phrase);
+            }
+          }
+        } else {
+          console.log('DEBUG: No container found');
+        }
+      }
 
       // Process each PR row to extract title, date, and other metadata
       let processedRowCount = 0;
@@ -291,6 +385,62 @@
               }
             }
           }
+          
+          // Method 1.5: Look for time elements with title attributes containing dates
+          // Based on debug output, we found elements with title="August 7, 2025 at 3:08:35 PM GMT+2"
+          if (!prDate) {
+            console.log('DEBUG: Method 1.5 - Looking for time elements with date titles');
+            const timeElements = row.querySelectorAll('time, span[title*="202"], [title*="at "], [title*="GMT"], [title*="PM"], [title*="AM"]');
+            console.log('DEBUG: Found', timeElements.length, 'potential time elements');
+            
+            for (const element of timeElements) {
+              const titleAttr = element.getAttribute('title');
+              if (titleAttr) {
+                console.log('DEBUG: Checking title attribute:', titleAttr);
+                
+                // Try direct parsing first
+                let tempDate = new Date(titleAttr);
+                console.log('DEBUG: Direct parse result:', tempDate, 'Valid:', !isNaN(tempDate.getTime()));
+                
+                // If direct parsing fails, try to clean up the format
+                if (isNaN(tempDate.getTime())) {
+                  // Try to convert "August 7, 2025 at 3:08:35 PM GMT+2" to a more standard format
+                  const cleanedDate = titleAttr
+                    .replace(' at ', ' ')  // Remove " at "
+                    .replace(' GMT+2', '+02:00')  // Convert GMT+2 to standard timezone format
+                    .replace(' GMT-', '-')  // Handle negative timezones
+                    .replace(' GMT+', '+');  // Handle positive timezones
+                  
+                  console.log('DEBUG: Cleaned date string:', cleanedDate);
+                  tempDate = new Date(cleanedDate);
+                  console.log('DEBUG: Cleaned parse result:', tempDate, 'Valid:', !isNaN(tempDate.getTime()));
+                }
+                
+                // If still not working, try manual parsing
+                if (isNaN(tempDate.getTime())) {
+                  const match = titleAttr.match(/(\w+ \d+, \d+) at (\d+):(\d+):(\d+) (AM|PM)/);
+                  if (match) {
+                    const [, datePart, hour, minute, second, ampm] = match;
+                    let hour24 = parseInt(hour);
+                    if (ampm === 'PM' && hour24 !== 12) hour24 += 12;
+                    if (ampm === 'AM' && hour24 === 12) hour24 = 0;
+                    
+                    const manualDate = new Date(`${datePart} ${hour24}:${minute}:${second}`);
+                    console.log('DEBUG: Manual parse result:', manualDate, 'Valid:', !isNaN(manualDate.getTime()));
+                    tempDate = manualDate;
+                  }
+                }
+                
+                if (!isNaN(tempDate.getTime())) {
+                  prDate = tempDate;
+                  console.log('DEBUG: Successfully parsed date from title:', titleAttr, '-> parsed as:', prDate);
+                  break;
+                } else {
+                  console.log('DEBUG: Failed to parse date from title:', titleAttr);
+                }
+              }
+            }
+          }
 
           // Method 2: Extract date from text content using regex patterns (fallback)
           // When structured elements don't contain dates, parse from visible text
@@ -317,6 +467,9 @@
             
             // Extract relative dates and convert them
             const relativePatterns = [
+              /(\d+)\s+seconds?\s+ago/g,
+              /(\d+)\s+minutes?\s+ago/g,
+              /(\d+)\s+hours?\s+ago/g,
               /(\d+)\s+days?\s+ago/g,
               /(\d+)\s+weeks?\s+ago/g,
               /(\d+)\s+months?\s+ago/g
@@ -400,6 +553,45 @@
             }
             
             console.log(`Found ${allDatesInText.length} dates in row:`, allDatesInText.map(d => `${d.dateString} (${d.date.getFullYear()}-${d.date.getMonth()+1}) type:${d.dateType} priority:${d.priority} context: "${d.context}"`));
+            
+            // DEBUG: If no dates found, let's see what text we're working with
+            if (allDatesInText.length === 0) {
+              console.log('DEBUG: No dates found, examining row text for date patterns...');
+              console.log('DEBUG: Full row text (first 300 chars):', rowText.substring(0, 300));
+              
+              // Look for common date patterns in the text
+              const commonDatePatterns = [
+                /\d{1,2}\/\d{1,2}\/\d{4}/g,        // MM/DD/YYYY
+                /\d{4}-\d{2}-\d{2}/g,              // YYYY-MM-DD
+                /\d{1,2}-\d{1,2}-\d{4}/g,          // DD-MM-YYYY
+                /\w{3}\s+\d{1,2},?\s+\d{4}/g,      // "Aug 7, 2025"
+                /\d{1,2}\s+\w{3}\s+\d{4}/g,        // "7 Aug 2025"
+                /\d+\s+(minutes?|hours?|days?|weeks?|months?)\s+ago/g  // Relative dates
+              ];
+              
+              for (let i = 0; i < commonDatePatterns.length; i++) {
+                const pattern = commonDatePatterns[i];
+                const matches = rowText.match(pattern);
+                if (matches) {
+                  console.log(`DEBUG: Pattern ${i} found matches:`, matches);
+                }
+              }
+              
+              // Look for any HTML time elements or date attributes in the row element
+              const timeElements = row.querySelectorAll('time, [datetime], [data-date], [title*="202"], [aria-label*="202"]');
+              console.log('DEBUG: Found', timeElements.length, 'time-related elements');
+              
+              for (let i = 0; i < Math.min(3, timeElements.length); i++) {
+                const el = timeElements[i];
+                console.log(`DEBUG: Time element ${i}:`, {
+                  tagName: el.tagName,
+                  className: el.className,
+                  datetime: el.getAttribute('datetime'),
+                  title: el.getAttribute('title'),
+                  textContent: el.textContent.trim()
+                });
+              }
+            }
             
             // Filter to current month first
             const currentMonthDates = allDatesInText.filter(d => 
@@ -486,6 +678,7 @@
           // Method 4: Parse relative dates like "3 days ago" and also check if they fall in current month
           // Convert relative time expressions to absolute dates
           if (!prDate) {
+            console.log('DEBUG: Trying Method 4 - relative date parsing');
             const relativePatterns = [
               /(\d+)\s+seconds?\s+ago/i,
               /(\d+)\s+minutes?\s+ago/i,
@@ -841,6 +1034,13 @@
 
       console.log(`Final results: ${results.length} entries generated from ${rawPRs.length} PRs`);
       return results;
+      
+      } catch (error) {
+        console.error('Bitbucket Time Report: Fatal error in extractPRsFromCurrentPage:', error);
+        console.error('Error stack:', error.stack);
+        // Return empty results instead of crashing
+        return [];
+      }
     },
 
     /**
@@ -984,12 +1184,16 @@
     }
   };
 
+  // Debug logging
+  console.log('Bitbucket Time Report: Content script initialized successfully');
+
   /**
    * Message handler for communication with popup UI
    * Provides secure API for popup to interact with page content
    * Supports: UUID detection, PR extraction, pagination control
    */
   chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+    console.log('Bitbucket Time Report: Message received:', request);
     // Security: Validate message structure (allow messages from both popup and tabs)
     if (!request || typeof request.action !== 'string') {
       console.warn('Invalid message received - missing action');
@@ -1019,8 +1223,15 @@
           break;
         case 'extractPRs':
           // Extract and process PR data from current page
-          const prs = window.bitbucketPRExtractor.extractPRsFromCurrentPage();
-          sendResponse({prs: prs});
+          try {
+            console.log('Bitbucket Time Report: Starting PR extraction...');
+            const prs = window.bitbucketPRExtractor.extractPRsFromCurrentPage();
+            console.log('Bitbucket Time Report: PR extraction completed, found:', prs.length, 'entries');
+            sendResponse({prs: prs});
+          } catch (extractError) {
+            console.error('Bitbucket Time Report: Error during PR extraction:', extractError);
+            sendResponse({prs: [], error: extractError.message});
+          }
           break;
         case 'hasNextPage':
           // Check if more pages exist for pagination

@@ -33,7 +33,9 @@ document.addEventListener('DOMContentLoaded', function() {
       }
 
       // Step 1: Identify the current user via content script
+      console.log('Bitbucket Time Report: Sending getUserUUID message to tab:', tab.id);
       const uuidResponse = await chrome.tabs.sendMessage(tab.id, {action: 'getUserUUID'});
+      console.log('Bitbucket Time Report: UUID response:', uuidResponse);
 
       if (!uuidResponse || !uuidResponse.uuid) {
         throw new Error('Could not retrieve user UUID. Please make sure you are logged in to Bitbucket.');
@@ -115,7 +117,15 @@ document.addEventListener('DOMContentLoaded', function() {
         showStatus(`Processing pull requests from page ${pageCount}...`, 'loading');
 
         // Extract PR data from the current page using content script
+        console.log('Bitbucket Time Report: Sending extractPRs message to tab:', tabId);
         const response = await chrome.tabs.sendMessage(tabId, {action: 'extractPRs'});
+        console.log('Bitbucket Time Report: Extract response:', response);
+        
+        // Check for extraction errors
+        if (response && response.error) {
+          console.error('Bitbucket Time Report: Content script reported error:', response.error);
+          showStatus(`Error extracting PRs: ${response.error}`, 'error');
+        }
 
         if (response && response.prs && response.prs.length > 0) {
           allPRs.push(...response.prs);  // Accumulate results from all pages
