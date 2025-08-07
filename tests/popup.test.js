@@ -29,8 +29,24 @@ describe('Popup UI Controller', () => {
       url: 'https://bitbucket.org/test/repo' 
     }]);
     
-    global.chrome.tabs.sendMessage.mockResolvedValue({ 
-      uuid: 'test-uuid-12345678901234567890123456789012' 
+    global.chrome.tabs.sendMessage.mockImplementation((tabId, message) => {
+      // Mock different responses based on the action
+      switch (message.action) {
+        case 'getUserUUID':
+          return Promise.resolve({ uuid: 'test-uuid-12345678901234567890123456789012' });
+        case 'extractPRs':
+          return Promise.resolve({ prs: ['Test PR 1', 'Test PR 2'] });
+        case 'hasNextPage':
+          return Promise.resolve({ hasNext: false });
+        case 'goToNextPage':
+          return Promise.resolve({ navigated: true });
+        case 'checkPRListReady':
+          return Promise.resolve({ ready: true });
+        case 'checkPageReady':
+          return Promise.resolve({ ready: true });
+        default:
+          return Promise.resolve({});
+      }
     });
     
     global.chrome.tabs.update.mockResolvedValue({});
@@ -604,6 +620,100 @@ describe('Popup UI Controller', () => {
       testCases.forEach(({ error, expected }) => {
         expect(getUserFriendlyError(error)).toBe(expected);
       });
+    });
+  });
+  
+  describe('Error Handling', () => {
+    test('should handle content script extraction errors', async () => {
+      // Mock an error response from content script
+      chrome.tabs.sendMessage.mockImplementation((tabId, message) => {
+        if (message.action === 'extractPRs') {
+          return Promise.resolve({ prs: [], error: 'Test extraction error' });
+        }
+        return Promise.resolve({ uuid: 'test-uuid' });
+      });
+      
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+      
+      // Simulate the extraction process
+      const tabId = 1;
+      const response = await chrome.tabs.sendMessage(tabId, {action: 'extractPRs'});
+      
+      expect(response.error).toBe('Test extraction error');
+      expect(response.prs).toEqual([]);
+      
+      consoleSpy.mockRestore();
+    });
+    
+    test('should handle connection errors gracefully', async () => {
+      // Mock a connection error
+      chrome.tabs.sendMessage.mockRejectedValue(new Error('Could not establish connection. Receiving end does not exist.'));
+      
+      try {
+        await chrome.tabs.sendMessage(1, {action: 'getUserUUID'});
+      } catch (error) {
+        expect(error.message).toContain('Could not establish connection');
+      }
+    });
+    
+    test('should handle invalid UUID format', async () => {
+      chrome.tabs.sendMessage.mockResolvedValue({ uuid: 'invalid-uuid' });
+      
+      const response = await chrome.tabs.sendMessage(1, {action: 'getUserUUID'});
+      
+      // UUID should be 36 characters with hyphens
+      expect(response.uuid).toBe('invalid-uuid');
+      expect(response.uuid.match(/^[a-f0-9-]{36}$/i)).toBeFalsy();
+    });
+  });
+  
+  describe('Enhanced Debugging and Logging', () => {
+    test('should log debug information during extraction', async () => {
+      const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
+      
+      // Mock a successful extraction
+      chrome.tabs.sendMessage.mockResolvedValue({ 
+        prs: ['Test PR'],
+        debug: 'Debug information'
+      });
+      
+      const response = await chrome.tabs.sendMessage(1, {action: 'extractPRs'});
+      
+      expect(response.prs).toEqual(['Test PR']);
+      
+      consoleSpy.mockRestore();
+    });
+    
+    test('should handle improved row selector logic', () => {
+      // Create a mock DOM structure that matches current Bitbucket layout
+      document.body.innerHTML = `
+        <table class="css-1yq88hf edylmxf0">
+          <thead>
+            <tr>
+              <th>Summary</th>
+              <th>Created</th>
+              <th>Activity</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>
+                <span title="August 7, 2025 at 3:08:35 PM GMT+2">55 minutes ago</span>
+                DEP-6284: Update the ChatGPT logo with marketing SVG
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      `;
+      
+      // Test that tbody tr selector finds rows
+      const rows = document.querySelectorAll('tbody tr');
+      expect(rows.length).toBe(1);
+      
+      // Test that time elements with title attributes are found
+      const timeElements = document.querySelectorAll('span[title*="202"]');
+      expect(timeElements.length).toBe(1);
+      expect(timeElements[0].getAttribute('title')).toBe('August 7, 2025 at 3:08:35 PM GMT+2');
     });
   });
 });

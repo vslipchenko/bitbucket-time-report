@@ -167,7 +167,7 @@ const mockRow = createMockPRRow({
   title: 'Fix authentication bug',
   branch: 'bugfix/auth',
   dateText: '7 days ago',
-  approvals: [{ author: 'Viktor', date: '2025-08-01' }]
+  approvals: [{ author: 'Ben', date: '2025-08-01' }]
 });
 ```
 
@@ -190,7 +190,7 @@ const mockRow = createMockPRRow({
 // Realistic test data
 const mockBitbucketRows = [
   {
-    text: 'Vlad Slipchenko DEP-6001: Fix auth bug Branch: bugfix/DEP-6001 merged 2025-08-15 Viktor approved 2025-08-14',
+    text: 'Vlad Slipchenko DEP-6001: Fix auth bug Branch: bugfix/DEP-6001 merged 2025-08-15 Ben approved 2025-08-14',
     expectedDate: '2025-08-15',
     expectedType: 'B',
     expectedPriority: 100

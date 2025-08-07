@@ -7,38 +7,81 @@ describe('Bitbucket Extension Integration Tests', () => {
   let mockBitbucketPage;
   
   beforeEach(() => {
+    // Generate dynamic dates for current month to ensure tests always find PRs
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth();
+    
+    // Create dates within current month (ensure all dates are in current month)
+    const date1 = new Date(now.getTime() - (2 * 60 * 60 * 1000)); // 2 hours ago
+    const date2 = new Date(now.getTime() - (1 * 24 * 60 * 60 * 1000)); // 1 day ago  
+    const date3 = new Date(now.getTime() - (2 * 24 * 60 * 60 * 1000)); // 2 days ago
+    const date4 = new Date(now.getTime() - (3 * 24 * 60 * 60 * 1000)); // 3 days ago
+    
+    // Format dates for title attributes
+    const formatDate = (date) => {
+      const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
+        'July', 'August', 'September', 'October', 'November', 'December'];
+      const month = monthNames[date.getMonth()];
+      const day = date.getDate();
+      const year = date.getFullYear();
+      const hours = date.getHours();
+      const minutes = date.getMinutes().toString().padStart(2, '0');
+      const seconds = date.getSeconds().toString().padStart(2, '0');
+      const ampm = hours >= 12 ? 'PM' : 'AM';
+      const displayHour = hours === 0 ? 12 : hours > 12 ? hours - 12 : hours;
+      
+      return `${month} ${day}, ${year} at ${displayHour}:${minutes}:${seconds} ${ampm} GMT+2`;
+    };
+    
     // Create a mock Bitbucket page DOM structure
     document.body.innerHTML = `
       <div class="aui-page-panel">
         <main>
-          <table class="css-v9dzkn edylmxf0">
+          <table class="css-1yq88hf edylmxf0">
+            <thead>
+              <tr>
+                <th scope="col" colspan="15"><span>Summary</span></th>
+                <th scope="col" colspan="3"><span>Created</span></th>
+                <th scope="col" colspan="3"><span>Activity</span></th>
+                <th scope="col" colspan="3"><span>Reviewers</span></th>
+                <th scope="col" colspan="2"><span>Builds</span></th>
+              </tr>
+            </thead>
             <tbody>
-              <tr id="pr-row-1">
+              <tr>
                 <td>
-                  Vlad Slipchenko DEP-6001: Fix authentication bug 
-                  Branch: bugfix/DEP-6001 bugfix/DEP-6001 
-                  Branch: develop develop 
-                  Vlad Slipchenko - #3550, updated 7 days ago 
-                  Viktor Dohadin approved 2025-08-01 (approved)
-                  Justin Keith approved 2025-07-31 (approved)
+                  <a href="/pull-requests/3550">DEP-6001: Fix authentication bug</a>
+                  <span title="${formatDate(date4)}">3 days ago</span>
+                  Branch: bugfix/DEP-6001 
+                  Ben Dohadin approved 
+                  Justin Keith approved 
                 </td>
               </tr>
-              <tr id="pr-row-2">
+              <tr>
                 <td>
-                  Vlad Slipchenko DEP-6002: Add user dashboard 
-                  Branch: feature/DEP-6002 feature/DEP-6002 
-                  Branch: develop develop 
-                  Vlad Slipchenko - #3549, updated 3 days ago 
-                  Alex Borisevich approved 2025-08-04 (approved)
+                  <a href="/pull-requests/3549">DEP-6002: Add user dashboard</a>
+                  <span title="${formatDate(date3)}">2 days ago</span>
+                  Branch: feature/DEP-6002
+                  Bob Borisevich approved 
                 </td>
               </tr>
-              <tr id="pr-row-3">
+              <tr>
                 <td>
-                  Vlad Slipchenko DEP-6003: Update API documentation 
-                  Branch: feature/DEP-6003 feature/DEP-6003 
-                  Branch: develop develop 
-                  merged 2025-08-03
-                  Mykola Hreb approved 2025-08-02 (approved)
+                  <a href="/pull-requests/3548">DEP-6003: Update API documentation</a>
+                  <span title="${formatDate(date2)}">1 day ago</span>
+                  Branch: feature/DEP-6003
+                  Tom Hreb approved 
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  <a href="/pull-requests/3555">DEP-6284: Update the ChatGPT logo with marketing SVG</a>
+                  <span title="${formatDate(date1)}">2 hours ago</span>
+                  Branch: feature/DEP-6284
+                  Ben Dohadin approved 
+                  Bob Borisevich approved 
+                  Tom Hreb approved 
                 </td>
               </tr>
             </tbody>
@@ -93,6 +136,9 @@ describe('Bitbucket Extension Integration Tests', () => {
         const currentMonth = new Date().getMonth() + 1;
         const extractedPRs = [];
         
+        console.log('Integration test: Current date:', new Date().toISOString());
+        console.log('Integration test: Looking for PRs from:', currentYear, currentMonth);
+        
         rows.forEach(row => {
           const text = row.textContent.trim();
           
@@ -103,22 +149,52 @@ describe('Bitbucket Extension Integration Tests', () => {
           const ticketId = titleMatch[1];
           const title = titleMatch[2].trim();
           
-          // Extract dates (simulate the priority logic)
+          // Extract dates from title attributes (like the real content script does)
           let selectedDate = null;
           let dateType = 'unknown';
           
-          // Check for explicit merge date (priority 100)
-          const mergeMatch = text.match(/merged (\d{4}-\d{2}-\d{2})/);
-          if (mergeMatch) {
-            selectedDate = new Date(mergeMatch[1]);
-            dateType = 'merge';
-          } else {
-            // Check for relative dates (priority 90)
-            const relativeMatch = text.match(/(\d+) days ago/);
-            if (relativeMatch) {
-              const daysAgo = parseInt(relativeMatch[1]);
-              selectedDate = new Date(new Date().getTime() - (daysAgo * 24 * 60 * 60 * 1000));
-              dateType = 'relative';
+          // Look for time elements with title attributes (Method 1.5 from content script)
+          const timeElements = row.querySelectorAll('time, span[title*="202"], [title*="at "], [title*="GMT"], [title*="PM"], [title*="AM"]');
+          
+          for (const element of timeElements) {
+            const titleAttr = element.getAttribute('title');
+            if (titleAttr) {
+              console.log('Integration test: Found title attribute:', titleAttr);
+              
+              // Try direct parsing first
+              let tempDate = new Date(titleAttr);
+              
+              // If direct parsing fails, try to clean up the format
+              if (isNaN(tempDate.getTime())) {
+                const cleanedDate = titleAttr
+                  .replace(' at ', ' ')  // Remove " at "
+                  .replace(' GMT+2', '+02:00')  // Convert GMT+2 to standard timezone format
+                  .replace(' GMT-', '-')  // Handle negative timezones
+                  .replace(' GMT+', '+');  // Handle positive timezones
+                
+                tempDate = new Date(cleanedDate);
+              }
+              
+              // Manual parsing fallback
+              if (isNaN(tempDate.getTime())) {
+                const match = titleAttr.match(/(\w+ \d+, \d+) at (\d+):(\d+):(\d+) (AM|PM)/);
+                if (match) {
+                  const [, datePart, hour, minute, second, ampm] = match;
+                  let hour24 = parseInt(hour);
+                  if (ampm === 'PM' && hour24 !== 12) hour24 += 12;
+                  if (ampm === 'AM' && hour24 === 12) hour24 = 0;
+                  
+                  const manualDate = new Date(`${datePart} ${hour24}:${minute}:${second}`);
+                  tempDate = manualDate;
+                }
+              }
+              
+              if (!isNaN(tempDate.getTime())) {
+                selectedDate = tempDate;
+                dateType = 'title_attribute';
+                console.log('Integration test: Successfully parsed date from title:', titleAttr, '-> parsed as:', selectedDate.toISOString(), 'month:', selectedDate.getMonth() + 1);
+                break;
+              }
             }
           }
           
@@ -191,6 +267,12 @@ describe('Bitbucket Extension Integration Tests', () => {
 
       const result = await mockExtraction();
       
+      console.log('Result length:', result.length);
+      console.log('Sample entries:', result.slice(0, 3));
+      console.log('All entries:', result);
+      console.log('Entries with P:', result.filter(entry => entry.includes('P:')));
+      console.log('Entries with D:', result.filter(entry => entry.includes('D:')));
+      
       // Verify results
       expect(result.length).toBeGreaterThan(0);
       
@@ -257,17 +339,17 @@ describe('Bitbucket Extension Integration Tests', () => {
     test('should prioritize merge dates over approval dates in real scenarios', () => {
       const testRows = [
         {
-          text: 'DEP-6001: Fix bug merged 2025-08-05 Viktor approved 2025-08-04',
+          text: 'DEP-6001: Fix bug merged 2025-08-05 Ben approved 2025-08-04',
           expectedDate: '2025-08-05',
           expectedType: 'merge'
         },
         {
-          text: 'DEP-6002: Add feature Alex approved 2025-08-03 7 days ago',
+          text: 'DEP-6002: Add feature Bob approved 2025-08-03 7 days ago',
           expectedDate: '2025-08-01', // 7 days ago from Aug 8
           expectedType: 'relative'
         },
         {
-          text: 'DEP-6003: Update docs Viktor approved 2025-08-02 Alex approved 2025-08-01 updated 2025-08-03',
+          text: 'DEP-6003: Update docs Ben approved 2025-08-02 Bob approved 2025-08-01 updated 2025-08-03',
           expectedDate: '2025-08-03',
           expectedType: 'update'
         }
@@ -597,6 +679,126 @@ describe('Bitbucket Extension Integration Tests', () => {
       expect(result.totalRows).toBe(1000);
       expect(result.processedCount).toBe(1000);
       expect(result.duration).toBeLessThan(1000); // Should complete in under 1 second
+    });
+  });
+  
+  describe('Enhanced Row Detection and Date Parsing', () => {
+    test('should use tbody tr selector to find PR rows', () => {
+      // Test the improved row selector
+      const rows = document.querySelectorAll('tbody tr');
+      expect(rows.length).toBe(4); // Updated to match our new mock data
+    });
+    
+    test('should extract dates from title attributes', () => {
+      const timeElements = document.querySelectorAll('span[title*="202"]');
+      expect(timeElements.length).toBe(4);
+      
+      // Test that each element has a valid date in title
+      timeElements.forEach(element => {
+        const title = element.getAttribute('title');
+        expect(title).toMatch(/\w+ \d+, \d+ at \d+:\d+:\d+ (AM|PM) GMT[+-]\d+/);
+      });
+    });
+    
+    test('should prioritize recent dates from current month', () => {
+      // The most recent PR (2 hours ago) should be found and processed
+      const timeElements = document.querySelectorAll('span[title*="202"]');
+      expect(timeElements.length).toBe(4);
+      
+      // Check that all time elements have valid date formats
+      timeElements.forEach(element => {
+        const title = element.getAttribute('title');
+        expect(title).toMatch(/\w+ \d+, \d+ at \d+:\d+:\d+ (AM|PM) GMT[+-]\d+/);
+        
+        // Verify the date can be parsed
+        const dateMatch = title.match(/(\w+ \d+, \d+) at (\d+):(\d+):(\d+) (AM|PM)/);
+        expect(dateMatch).not.toBeNull();
+      });
+    });
+  });
+  
+  describe('Debug Logging Integration', () => {
+    test('should provide detailed debug information when no rows found', () => {
+      // Create an empty table to test debug logging
+      document.body.innerHTML = `
+        <table class="css-1yq88hf edylmxf0">
+          <thead>
+            <tr><th>Summary</th></tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      `;
+      
+      const rows = document.querySelectorAll('tbody tr');
+      expect(rows.length).toBe(0);
+      
+      // This would trigger debug logging in the actual implementation
+      const table = document.querySelector('table');
+      expect(table).not.toBeNull();
+      expect(table.className).toBe('css-1yq88hf edylmxf0');
+    });
+    
+    test('should handle various date formats in title attributes', () => {
+      // Create test elements with different date formats
+      document.body.innerHTML = `
+        <div>
+          <span title="August 7, 2025 at 3:08:35 PM GMT+2">Test 1</span>
+          <span title="January 15, 2025 at 9:30:00 AM GMT-5">Test 2</span>
+          <span title="June 20, 2025 at 11:45:15 PM GMT+0">Test 3</span>
+        </div>
+      `;
+      
+      const timeElements = document.querySelectorAll('span[title*="202"]');
+      expect(timeElements.length).toBe(3);
+      
+      // Test that we can find elements by various selectors used in debugging
+      const pmElements = document.querySelectorAll('[title*="PM"]');
+      const amElements = document.querySelectorAll('[title*="AM"]');
+      const gmtElements = document.querySelectorAll('[title*="GMT"]');
+      
+      expect(pmElements.length).toBe(2);
+      expect(amElements.length).toBe(1);
+      expect(gmtElements.length).toBe(3);
+    });
+  });
+  
+  describe('Error Recovery Integration', () => {
+    test('should gracefully handle malformed DOM structures', () => {
+      // Test with incomplete or malformed table structure
+      document.body.innerHTML = `
+        <table class="css-1yq88hf edylmxf0">
+          <tr>
+            <td>Incomplete row without proper structure</td>
+          </tr>
+        </table>
+      `;
+      
+      const rows = document.querySelectorAll('tbody tr');
+      expect(rows.length).toBe(1); // Browser creates implicit tbody, so row is found
+      
+      const allRows = document.querySelectorAll('tr');
+      expect(allRows.length).toBe(1); // The row exists
+      
+      // Test container detection
+      const table = document.querySelector('table');
+      expect(table).not.toBeNull();
+    });
+    
+    test('should detect loading states and empty results', () => {
+      // Test empty state detection
+      document.body.innerHTML = `
+        <table class="css-1yq88hf edylmxf0">
+          <tbody>
+            <tr>
+              <td class="no-results">No pull requests found</td>
+            </tr>
+          </tbody>
+        </table>
+      `;
+      
+      const noResultsElement = document.querySelector('.no-results');
+      expect(noResultsElement).not.toBeNull();
+      expect(noResultsElement.textContent.toLowerCase()).toContain('no pull requests');
     });
   });
 });

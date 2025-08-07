@@ -30,6 +30,9 @@ describe('Bitbucket PR Extractor', () => {
         
         // STEP 1: Extract relative dates first (they have high priority)
         const relativePatterns = [
+          /(\d+)\s+seconds?\s+ago/g,
+          /(\d+)\s+minutes?\s+ago/g,
+          /(\d+)\s+hours?\s+ago/g,
           /(\d+)\s+days?\s+ago/g,
           /(\d+)\s+weeks?\s+ago/g,
           /(\d+)\s+months?\s+ago/g
@@ -43,7 +46,13 @@ describe('Bitbucket PR Extractor', () => {
             const value = parseInt(match[1]);
             let calculatedDate = null;
 
-            if (pattern.source.includes('day')) {
+            if (pattern.source.includes('second')) {
+              calculatedDate = new Date(now.getTime() - (value * 1000));
+            } else if (pattern.source.includes('minute')) {
+              calculatedDate = new Date(now.getTime() - (value * 60 * 1000));
+            } else if (pattern.source.includes('hour')) {
+              calculatedDate = new Date(now.getTime() - (value * 60 * 60 * 1000));
+            } else if (pattern.source.includes('day')) {
               calculatedDate = new Date(now.getTime() - (value * 24 * 60 * 60 * 1000));
             } else if (pattern.source.includes('week')) {
               calculatedDate = new Date(now.getTime() - (value * 7 * 24 * 60 * 60 * 1000));
@@ -138,7 +147,7 @@ describe('Bitbucket PR Extractor', () => {
             return b.date.getTime() - a.date.getTime();
           });
           
-          return currentMonthDates[0];
+          return currentMonthDates[0]; // Return the whole object with date, priority, etc.
         }
         
         return null;
@@ -303,7 +312,7 @@ describe('Bitbucket PR Extractor', () => {
     });
 
     test('should prioritize merge date over approval date', () => {
-      const rowText = 'DEP-6003: Test PR Viktor approved 2025-08-12 merged 2025-08-11';
+      const rowText = 'DEP-6003: Test PR Ben approved 2025-08-12 merged 2025-08-11';
       
       // Test the extraction step by step
       const allDatesInText = [];
@@ -336,7 +345,7 @@ describe('Bitbucket PR Extractor', () => {
     });
 
     test('should prioritize relative date over approval date when no merge date', () => {
-      const rowText = 'DEP-6004: Test PR Viktor approved 2025-08-12 Alex approved 2025-08-11 3 days ago';
+      const rowText = 'DEP-6004: Test PR Ben approved 2025-08-12 Bob approved 2025-08-11 3 days ago';
       const result = bitbucketPRExtractor.extractDateFromText(rowText, 2025, 8);
       
       expect(result).toBeTruthy();
@@ -476,8 +485,8 @@ describe('Bitbucket PR Extractor', () => {
           ticketId: 'DEP-6001'
         },
         {
-          date: new Date('2025-08-10'),
-          dateString: '2025-08-10',
+          date: new Date('2025-08-08'),
+          dateString: '2025-08-08',
           type: 'F',
           title: 'Add dashboard',
           ticketId: 'DEP-6002'
@@ -579,6 +588,126 @@ describe('Bitbucket PR Extractor', () => {
       for (let i = 0; i < timelineDates.length - 1; i++) {
         expect(timelineDates[i]).toBeGreaterThanOrEqual(timelineDates[i + 1]);
       }
+    });
+  });
+  
+  describe('Date Parsing from Title Attributes', () => {
+    beforeEach(() => {
+      // Add the new date parsing function to our test extractor
+      bitbucketPRExtractor.extractDateFromTitleAttribute = function(titleAttr) {
+        if (!titleAttr) return null;
+        
+        // Try direct parsing first
+        let tempDate = new Date(titleAttr);
+        if (!isNaN(tempDate.getTime())) {
+          return tempDate;
+        }
+        
+        // If direct parsing fails, try to clean up the format
+        // Convert "August 7, 2025 at 3:08:35 PM GMT+2" to a more standard format
+        const cleanedDate = titleAttr
+          .replace(' at ', ' ')  // Remove " at "
+          .replace(' GMT+2', '+02:00')  // Convert GMT+2 to standard timezone format
+          .replace(' GMT-', '-')  // Handle negative timezones
+          .replace(' GMT+', '+');  // Handle positive timezones
+        
+        tempDate = new Date(cleanedDate);
+        if (!isNaN(tempDate.getTime())) {
+          return tempDate;
+        }
+        
+        // If still not working, try manual parsing
+        const match = titleAttr.match(/(\w+ \d+, \d+) at (\d+):(\d+):(\d+) (AM|PM)/);
+        if (match) {
+          const [, datePart, hour, minute, second, ampm] = match;
+          let hour24 = parseInt(hour);
+          if (ampm === 'PM' && hour24 !== 12) hour24 += 12;
+          if (ampm === 'AM' && hour24 === 12) hour24 = 0;
+          
+          const manualDate = new Date(`${datePart} ${hour24}:${minute}:${second}`);
+          if (!isNaN(manualDate.getTime())) {
+            return manualDate;
+          }
+        }
+        
+        return null;
+      };
+    });
+    
+    test('should parse Bitbucket timestamp format correctly', () => {
+      const result = bitbucketPRExtractor.extractDateFromTitleAttribute('August 7, 2025 at 3:08:35 PM GMT+2');
+      
+      expect(result).not.toBeNull();
+      expect(result.getFullYear()).toBe(2025);
+      expect(result.getMonth()).toBe(7); // August (0-based)
+      expect(result.getDate()).toBe(7);
+      expect(result.getHours()).toBe(15); // 3 PM
+      expect(result.getMinutes()).toBe(8);
+      expect(result.getSeconds()).toBe(35);
+    });
+    
+    test('should handle different timezone formats', () => {
+      const result1 = bitbucketPRExtractor.extractDateFromTitleAttribute('January 15, 2025 at 9:30:00 AM GMT-5');
+      const result2 = bitbucketPRExtractor.extractDateFromTitleAttribute('June 20, 2025 at 11:45:15 PM GMT+0');
+      
+      expect(result1).not.toBeNull();
+      expect(result2).not.toBeNull();
+      expect(result1.getFullYear()).toBe(2025);
+      expect(result2.getFullYear()).toBe(2025);
+    });
+    
+    test('should return null for invalid date strings', () => {
+      expect(bitbucketPRExtractor.extractDateFromTitleAttribute('')).toBeNull();
+      expect(bitbucketPRExtractor.extractDateFromTitleAttribute('invalid date')).toBeNull();
+      expect(bitbucketPRExtractor.extractDateFromTitleAttribute(null)).toBeNull();
+      expect(bitbucketPRExtractor.extractDateFromTitleAttribute(undefined)).toBeNull();
+    });
+    
+    test('should handle 12-hour format correctly', () => {
+      const pmResult = bitbucketPRExtractor.extractDateFromTitleAttribute('March 10, 2025 at 11:30:45 PM GMT+1');
+      const amResult = bitbucketPRExtractor.extractDateFromTitleAttribute('March 10, 2025 at 11:30:45 AM GMT+1');
+      const noonResult = bitbucketPRExtractor.extractDateFromTitleAttribute('March 10, 2025 at 12:00:00 PM GMT+1');
+      const midnightResult = bitbucketPRExtractor.extractDateFromTitleAttribute('March 10, 2025 at 12:00:00 AM GMT+1');
+      
+      expect(pmResult.getHours()).toBe(23); // 11 PM
+      expect(amResult.getHours()).toBe(11); // 11 AM
+      expect(noonResult.getHours()).toBe(12); // 12 PM (noon)
+      expect(midnightResult.getHours()).toBe(0); // 12 AM (midnight)
+    });
+  });
+
+  describe('Enhanced Relative Date Parsing', () => {
+    test('should parse minutes and hours correctly', () => {
+      const currentTime = new Date();
+      
+      const result1 = bitbucketPRExtractor.extractDateFromText('updated 30 minutes ago', currentTime.getFullYear(), currentTime.getMonth() + 1);
+      const result2 = bitbucketPRExtractor.extractDateFromText('merged 2 hours ago', currentTime.getFullYear(), currentTime.getMonth() + 1);
+      
+      expect(result1).not.toBeNull();
+      expect(result2).not.toBeNull();
+      
+      // Check that the dates are approximately correct (within a reasonable margin)
+      const now = new Date();
+      const thirtyMinutesAgo = new Date(now.getTime() - (30 * 60 * 1000));
+      const twoHoursAgo = new Date(now.getTime() - (2 * 60 * 60 * 1000));
+      
+      expect(Math.abs(result1.date.getTime() - thirtyMinutesAgo.getTime())).toBeLessThan(60000); // Within 1 minute
+      expect(Math.abs(result2.date.getTime() - twoHoursAgo.getTime())).toBeLessThan(60000); // Within 1 minute
+    });
+    
+    test('should prioritize merge dates over approval dates', () => {
+      const textWithMultipleDates = 'Ben approved 2 hours ago (approved) Bob approved 1 hour ago (approved) merged 30 minutes ago';
+      const currentTime = new Date();
+      
+      const result = bitbucketPRExtractor.extractDateFromText(textWithMultipleDates, currentTime.getFullYear(), currentTime.getMonth() + 1);
+      
+      expect(result).not.toBeNull();
+      
+      // Should pick the merge date (30 minutes ago) over the approval dates
+      const now = new Date();
+      const thirtyMinutesAgo = new Date(now.getTime() - (30 * 60 * 1000));
+      
+      expect(Math.abs(result.date.getTime() - thirtyMinutesAgo.getTime())).toBeLessThan(60000); // Within 1 minute
     });
   });
 });

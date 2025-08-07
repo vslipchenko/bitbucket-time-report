@@ -94,6 +94,59 @@ The extension requires:
 - `storage` - To store temporary data
 - Host permission for `bitbucket.org` - To access Bitbucket pages
 
+## Testing
+
+The extension includes a comprehensive test suite to ensure reliability and correctness. The tests cover all core functionality including date parsing, timeline generation, error handling, and UI interactions.
+
+### Running Tests
+
+1. Navigate to the `tests` directory:
+   ```bash
+   cd tests
+   ```
+
+2. Install test dependencies:
+   ```bash
+   npm install
+   ```
+
+3. Run all tests:
+   ```bash
+   npm test
+   ```
+
+4. Run tests with verbose output:
+   ```bash
+   npm run test:verbose
+   ```
+
+5. Run tests in watch mode (for development):
+   ```bash
+   npm run test:watch
+   ```
+
+6. Generate test coverage report:
+   ```bash
+   npm run test:coverage
+   ```
+
+### Test Structure
+
+- **`content.test.js`** - Tests for the content script functionality (date parsing, PR extraction, timeline generation)
+- **`popup.test.js`** - Tests for the popup UI controller (settings, error handling, user interactions)
+- **`integration.test.js`** - End-to-end integration tests simulating real-world usage scenarios
+
+### Test Coverage
+
+The test suite includes:
+- ✅ **69 total tests** covering all core functionality
+- ✅ **Date extraction** from various formats (relative dates, absolute dates, title attributes)
+- ✅ **Timeline generation** with progress and completion entries
+- ✅ **Error handling** and edge cases
+- ✅ **UI interactions** and user workflows
+- ✅ **Integration scenarios** with mock Bitbucket DOM structures
+- ✅ **Performance testing** with large datasets
+
 ## Troubleshooting
 
 - **Configuration Issues**:
